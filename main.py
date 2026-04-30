@@ -7,6 +7,8 @@ from sqlalchemy.orm import sessionmaker
 from database import Base, User, Product, Sale, Payment
 from datetime import datetime
 from mpesa import make_stk_push
+from generate_pdf import generate_pdf
+
 
 
 app = Flask(__name__)
@@ -302,6 +304,10 @@ def call_back():
         # update payment record with transaction code,transaction amount and status
         existing_payment.trans_code = data['Body']['stkCallback']['CallbackMetadata']['Item'][1]['Value']
         existing_payment.status="Success"
+        #now generate receipt pdf
+        text="Payment Receipt\n\nTransaction Code: "+  data['Body']['stkCallback']['CallbackMetadata']['Item'][1]['Value'] + "\n" + "Amount: KSH "+ str(existing_payment.trans_amount) +"\n"+ "Date: "+ str(existing_payment.created_at)
+        generate_pdf(text,data['Body']['stkCallback']['CallbackMetadata']['Item'][1]['Value'])
+        print(data)
         
     else:
         existing_payment.status="Failed"
