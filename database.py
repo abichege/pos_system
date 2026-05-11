@@ -1,6 +1,7 @@
-from sqlalchemy.orm import DeclarativeBase,Mapped,mapped_column
+from sqlalchemy.orm import DeclarativeBase,Mapped,mapped_column,relationship
 from sqlalchemy import String,Integer,Float,DateTime,ForeignKey
 from datetime import datetime
+from  typing import Optional
 
 class Base(DeclarativeBase):
     pass
@@ -21,20 +22,23 @@ class Product((Base)):
     amount:Mapped[Float] = mapped_column(Float)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
-class Sale((Base)):
-    __tablename__='sales'
-    id:Mapped[int] = mapped_column(Integer,primary_key=True)
-    product_id:Mapped[int] = mapped_column(ForeignKey('products.id'))
+class Sale(Base):
+    __tablename__ = 'sales'
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    product_id: Mapped[int] = mapped_column(ForeignKey('products.id'))
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    product: Mapped["Product"] = relationship()
+    payment: Mapped["Payment"] = relationship()
 
 # Payment - id, sale_id, mrid, crid, trans_code, trans_amount, phone_paid, status created_at
 class Payment(Base):
     __tablename__ = 'payments'
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    sale_id: Mapped[int] = mapped_column(ForeignKey("sales.id"))
-    mrid: Mapped[str] = mapped_column(String(100))
-    crid: Mapped[str] = mapped_column(String(100))
-    trans_code: Mapped[str] = mapped_column(String(100), nullable=True)
+    sale_id: Mapped[int] = mapped_column(ForeignKey("sales.id"),unique=True)
+    mrid: Mapped[Optional[str]] = mapped_column(String(100))
+    crid: Mapped[Optional[str]] = mapped_column(String(100))
+    trans_code: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     trans_amount: Mapped[float] = mapped_column(Float)
     phone_paid: Mapped[str] = mapped_column(String(20))
     status: Mapped[str] = mapped_column(String(50))

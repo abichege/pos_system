@@ -14,10 +14,12 @@ cloudinary.config(
 
 def upload_pdf(pdf_file):
     res=cloudinary.uploader.upload(f"receipts/{pdf_file}.pdf")
-
+    
     print("this is cloudinary---------")
     print(res["secure_url"])
     email("liquidambish@gmail.com","Payment Received",f"Thank You we have received your payment.Here is a link to your receipt-> {res['secure_url']}")
+    # message=f"Payment Received.Thank You we have received your payment.Here is a link to your receipt-> {res['secure_url']}"
+    # print(f"This is my sms{message}")
     return "success"
 
 # upload_pdf("UDS482XO0S")

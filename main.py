@@ -8,6 +8,8 @@ from database import Base, User, Product, Sale, Payment
 from datetime import datetime
 from mpesa import make_stk_push
 from generate_pdf import generate_pdf
+from sms import send_sms
+
 
 
 
@@ -19,7 +21,7 @@ CORS(app, supports_credentials=True)
 jwt = JWTManager(app)
 bcrypt = Bcrypt(app)
 
-DATABASE_URL = "postgresql+psycopg2://postgres:blossomabigael@localhost:5432/pos_db"
+DATABASE_URL = "postgresql+psycopg2://postgres:blossomabigael@localhost:5432/pos_database"
 
 # Connect SQLAlchemy to PostgreSQL using engine
 engine = create_engine(DATABASE_URL, echo=False)
@@ -212,7 +214,8 @@ def sales():
                         "id":           sale.payment.id,
                         "trans_code":   sale.payment.trans_code,
                         "trans_amount": sale.payment.trans_amount,
-                        "phone_paid":   sale.payment.phone_paid
+                        "phone_paid":   sale.payment.phone_paid,
+                        "status": sale.payment.status
                     } if sale.payment else None
                 })
 
@@ -237,6 +240,7 @@ def sales():
                 created_at=datetime.utcnow()
             )
             my_session.add(new_sale)
+            my_session.flush()
             my_session.commit()
 
             return jsonify({"msg": "Sale created successfully"}), 201
@@ -288,33 +292,41 @@ def stk_push():
         }), 200
 
     except Exception as e:
+        my_session.rollback()
         return jsonify({"error": str(e)}), 500
 
 
 @app.route('/stk-call-back', methods=allowed_methods)
 def call_back():
-    data = request.get_json()
-    print("stk callback data:-----------------", data)
+    try:
+        data = request.get_json()
+        print("stk callback data:-----------------", data)
 
-    # fetch the payment record using mrid and crid
-    query = select(Payment).where(Payment.mrid == data['Body']['stkCallback']['MerchantRequestID'], Payment.crid == data['Body']['stkCallback']['CheckoutRequestID'])
-    existing_payment = my_session.scalars(query).first()
+        # fetch the payment record using mrid and crid
+        query = select(Payment).where(Payment.mrid == data['Body']['stkCallback']['MerchantRequestID'], Payment.crid == data['Body']['stkCallback']['CheckoutRequestID'])
+        existing_payment = my_session.scalars(query).first()
 
-    if  int(data['Body']['stkCallback']['ResultCode'])==0:
-        # update payment record with transaction code,transaction amount and status
-        existing_payment.trans_code = data['Body']['stkCallback']['CallbackMetadata']['Item'][1]['Value']
-        existing_payment.status="Success"
-        #now generate receipt pdf
-        text="Payment Receipt\n\nTransaction Code: "+  data['Body']['stkCallback']['CallbackMetadata']['Item'][1]['Value'] + "\n" + "Amount: KSH "+ str(existing_payment.trans_amount) +"\n"+ "Date: "+ str(existing_payment.created_at)
-        generate_pdf(text,data['Body']['stkCallback']['CallbackMetadata']['Item'][1]['Value'])
-        print(data)
+        if  int(data['Body']['stkCallback']['ResultCode'])==0:
+            # update payment record with transaction code,transaction amount and status
+            existing_payment.trans_code = data['Body']['stkCallback']['CallbackMetadata']['Item'][1]['Value']
+            existing_payment.status="Paid"
+            #now generate receipt pdf
+            text="Payment Receipt\n\nTransaction Code: "+  data['Body']['stkCallback']['CallbackMetadata']['Item'][1]['Value'] + "\n" + "Amount: KSH "+ str(existing_payment.trans_amount) +"\n"+ "Date: "+ str(existing_payment.created_at)
+            generate_pdf(text,data['Body']['stkCallback']['CallbackMetadata']['Item'][1]['Value'])
+            # generate sms
+            message="Payment Received.Thank You we have received your payment.Welcome again"
+            send_sms(existing_payment.phone_paid,message)
+            print(data)
+            
+        else:
+            existing_payment.status="Unpaid"
         
-    else:
-        existing_payment.status="Failed"
         my_session.commit()
 
-    return jsonify({"message": "callback received"}), 200
-
+        return jsonify({"message": "callback received"}), 200
+    except Exception as e:
+        my_session.rollback()
+        return jsonify({"error":str(e)}),500
 
 @app.route('/mpesa-payments', methods=allowed_methods)
 def mpesa_payments():
