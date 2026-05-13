@@ -1,4 +1,4 @@
-# import africastalking
+import africastalking
 
 # username="sandbox"
 # API_key="atsk_9c1a8e8f65f5f9ba993de149d63a5bc7514dbacc65d46af2831b65cf322690448acf709c"
