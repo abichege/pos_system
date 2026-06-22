@@ -4,15 +4,17 @@ import base64
 import requests
 from datetime import datetime
 from requests.auth import HTTPBasicAuth
+from dotenv import load_dotenv
+import os
 
-consumer_key="D0P7CG8WveDoky1GjOFcrF9jn5cId1OkXxVesHdwLc1VLMog"
-consumer_secret="LlGUxE3wHED0AnkJkVz0zWX7I2AnPQ3GQzXMKD4EuRAGhLwk31yu9nP5nDqkQlSA"
-token_api="https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials"
-saf_short_code="174379"
-saf_stk_push_url="https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest"
-saf_api_url = "https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials"
-saf_pass_key="bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919"
-my_callback_url="https://payphone-despite-unrigged.ngrok-free.dev/stk-call-back"
+consumer_key=os.getenv("consumer_key")
+consumer_secret=os.getenv("consumer_secret")
+token_api=os.getenv("token_api")
+saf_short_code=os.getenv("saf_short_code")
+saf_stk_push_url=os.getenv("saf_stk_push_url")
+saf_api_url = os.getenv("saf_api_url")
+saf_pass_key=os.getenv("saf_pass_key")
+my_callback_url=os.getenv("my_callback_url")
 
 # time will be sent to the stk push
 # the request is for sending http like axios
@@ -22,6 +24,8 @@ my_callback_url="https://payphone-despite-unrigged.ngrok-free.dev/stk-call-back"
 
 def get_mpesa_access_token():
     try:
+        print("consumer_key:", consumer_key)
+        print("saf_api_url:", saf_api_url)
         res = requests.get(
             saf_api_url,
             auth=HTTPBasicAuth(consumer_key, consumer_secret),
@@ -45,10 +49,10 @@ headers = {
         }
 
 def generate_password():
-    
+
     password_str = saf_short_code + saf_pass_key + timestamp
     password_bytes = password_str.encode()
-    
+
     return base64.b64encode(password_bytes).decode("utf-8")
 
 password=generate_password()

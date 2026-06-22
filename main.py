@@ -1,3 +1,4 @@
+import psycopg2
 from flask import Flask, jsonify, request
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
 from flask_bcrypt import Bcrypt
@@ -8,21 +9,25 @@ from database import Base, User, Product, Sale, Payment, Stock
 from datetime import datetime, timedelta
 from mpesa import make_stk_push
 from generate_pdf import generate_pdf
-from sms import send_sms
+# from sms import send_sms
+from dotenv import load_dotenv
+import os
 
 
 app = Flask(__name__)
-app.config["JWT_SECRET_KEY"] = "abcdef123"
+app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
 
-CORS(app, supports_credentials=True)
+CORS(app, supports_credentials=True, origins=["http://localhost:8004"])
 
 jwt = JWTManager(app)
 bcrypt = Bcrypt(app)
 
-DATABASE_URL = "postgresql+psycopg2://postgres:blossomabigael@localhost:5432/pos_database"
+# DATABASE_URL = os.getenv("DATABASE_URL")
+MY_DATABASE_URL=os.getenv("MY_DATABASE_URL")
 
 # Connect SQLAlchemy to PostgreSQL using engine
-engine = create_engine(DATABASE_URL, echo=False)
+## engine = create_engine(DATABASE_URL,connect_args={"check_same_thread":False},echo=False)
+engine = create_engine(MY_DATABASE_URL,echo=False)
 
 # Create session to call query methods
 session = sessionmaker(bind=engine)
@@ -49,6 +54,7 @@ def register():
         method = request.method.lower()
 
         if method == "post":
+            #reads json data sent in an http request
             data = request.get_json()
 
             # Check all fields are provided
@@ -72,7 +78,9 @@ def register():
                 password=hashed_password,
                 created_at=datetime.utcnow()
             )
+            #stages a new object to be saved;not saved immediately
             my_session.add(new_user)
+            #permanently saves all changes
             my_session.commit()
 
             # Generate token
@@ -84,6 +92,7 @@ def register():
             return jsonify({"msg": "Method not allowed"}), 405
 
     except Exception as e:
+        #undoes all committed changes
         my_session.rollback()
         return jsonify({"error": str(e)}), 500
 
@@ -94,6 +103,7 @@ def login():
         method = request.method.lower()
 
         if method == "post":
+            #reads json data sent in an http request
             data = request.get_json()
 
             email = data.get("email")
@@ -460,7 +470,7 @@ def call_back():
                          ['CallbackMetadata']['Item'][1]['Value'])
             # generate sms
             message = "Payment Received.Thank You we have received your payment.Welcome again"
-            send_sms(existing_payment.phone_paid, message)
+            # send_sms(existing_payment.phone_paid, message)
             print(data)
 
         else:
@@ -709,4 +719,5 @@ def dashboard():
         return jsonify({"error": str(e)}), 500
 
 
-app.run(debug=True)
+if __name__ == "__main__":
+    app.run(debug=True)

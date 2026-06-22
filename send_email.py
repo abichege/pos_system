@@ -30,5 +30,4 @@ def email(to,subject,message):
     print(response)
     print("this is mailtrap--------")
 
-# email("liquidambish@gmail.com"," Testing APi 1","I am testing api")    
-
+# email("liquidambish@gmail.com"," Testing APi 1","I am testing api")

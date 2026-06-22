@@ -1,0 +1,27 @@
+services:
+  pos_api:
+    build: .
+    env_file:
+      - .env
+    image: pos_api
+    container_name: pos_backend
+    ports:
+      - '7000:80'
+    networks:
+      - my_net
+
+  my_postgres:
+    image: postgres:15
+    container_name: my_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 'blossomabigael'
+      POSTGRES_DB: pos_database
+    ports:
+      - '5432:5432'
+    networks:
+      - my_net 
+
+networks:
+  my_net:
+    driver: bridge
