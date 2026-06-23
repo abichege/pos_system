@@ -5,6 +5,7 @@ import requests
 from datetime import datetime
 from requests.auth import HTTPBasicAuth
 from dotenv import load_dotenv
+load_dotenv()
 import os
 
 consumer_key=os.getenv("consumer_key")

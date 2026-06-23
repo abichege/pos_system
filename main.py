@@ -11,6 +11,7 @@ from mpesa import make_stk_push
 from generate_pdf import generate_pdf
 # from sms import send_sms
 from dotenv import load_dotenv
+load_dotenv()
 import os
 
 
