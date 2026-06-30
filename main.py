@@ -18,7 +18,7 @@ import os
 app = Flask(__name__)
 app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
 
-CORS(app, supports_credentials=True, origins=["http://localhost:8004"])
+CORS(app, supports_credentials=True, origins=["http://174.138.45.153:5050"])
 
 jwt = JWTManager(app)
 bcrypt = Bcrypt(app)
