@@ -35,24 +35,10 @@ Base.metadata.create_all(engine)
 
 allowed_methods = ["GET", "POST", "PUT", "DELETE", "PATCH"]
 
-# How long a Pending payment is considered "in-flight" before it can be retried
+# How long a Pending payment blocks a retry in /stk-push.
+# This is ONLY a retry gate — it does NOT auto-expire payments.
+# Status only changes to Paid/Unpaid when Safaricom sends a callback.
 PENDING_TIMEOUT_SECONDS = 20
-
-
-# ── Helper: auto-expire stale Pending payments ───────────────────────────────
-def resolve_stale_payment(payment):
-    """
-    If a payment is still Pending but older than PENDING_TIMEOUT_SECONDS,
-    flip it to Unpaid and clear trans_code. Caller must commit.
-    Returns True if status was changed.
-    """
-    if payment and payment.status == "Pending":
-        age = (datetime.utcnow() - payment.created_at).total_seconds()
-        if age > PENDING_TIMEOUT_SECONDS:
-            payment.status = "Unpaid"
-            payment.trans_code = None
-            return True
-    return False
 
 
 @app.route('/', methods=allowed_methods)
@@ -261,13 +247,10 @@ def sales():
             query = select(Sale)
             all_sales = list(SessionLocal.scalars(query).all())
 
-            # Auto-resolve any stale Pending payments before returning data
-            any_resolved = False
-            for sale in all_sales:
-                if sale.payment and resolve_stale_payment(sale.payment):
-                    any_resolved = True
-            if any_resolved:
-                SessionLocal.commit()
+            # NOTE: We do NOT auto-expire Pending payments here.
+            # Only the /stk-call-back should change status to Paid or Unpaid.
+            # Safaricom callbacks can take 30-60s, so expiring at 20s
+            # would kill legitimate in-flight payments before they confirm.
 
             for sale in all_sales:
                 sales_list.append({
