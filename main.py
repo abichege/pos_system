@@ -18,7 +18,8 @@ import os
 app = Flask(__name__)
 app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
 
-CORS(app, supports_credentials=True, origins=["http://abipos.co.ke"])
+CORS(app, supports_credentials=True, origins=["https://abipos.co.ke",
+            "https://www.abipos.co.ke"])
 
 jwt = JWTManager(app)
 bcrypt = Bcrypt(app)
