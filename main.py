@@ -26,7 +26,12 @@ bcrypt = Bcrypt(app)
 
 MY_DATABASE_URL = os.getenv("MY_DATABASE_URL")
 
-engine = create_engine(MY_DATABASE_URL, echo=False)
+engine = create_engine(
+    MY_DATABASE_URL,
+    echo=False,
+    pool_pre_ping=True,
+    pool_recycle=300
+)
 
 # scoped_session gives each thread/request its own Session automatically
 SessionLocal = scoped_session(sessionmaker(bind=engine))
