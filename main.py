@@ -1,3 +1,4 @@
+import os
 import psycopg2
 from flask import Flask, jsonify, request
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
@@ -12,20 +13,25 @@ from generate_pdf import generate_pdf
 # from sms import send_sms
 from dotenv import load_dotenv
 load_dotenv()
-import os
 
 
 app = Flask(__name__)
 app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
 
 CORS(app, supports_credentials=True, origins=["https://abipos.co.ke",
-            "https://www.abipos.co.ke"])
+                                              "https://www.abipos.co.ke"])
 
 jwt = JWTManager(app)
 bcrypt = Bcrypt(app)
 
 MY_DATABASE_URL = os.getenv("MY_DATABASE_URL")
 
+engine = create_engine(
+    MY_DATABASE_URL,
+    echo=False,
+    pool_pre_ping=True,
+    pool_recycle=300
+)
 engine = create_engine(
     MY_DATABASE_URL,
     echo=False,
@@ -408,9 +414,9 @@ def stk_push():
     try:
         data = request.get_json()
 
-        sale_id      = data.get("sale_id")
+        sale_id = data.get("sale_id")
         trans_amount = data.get("amount")
-        phone_paid   = data.get("phone_number")
+        phone_paid = data.get("phone_number")
 
         if sale_id is None or trans_amount is None or phone_paid is None:
             return jsonify({"error": "sale_id, phone_number and amount are required"}), 400
@@ -425,7 +431,8 @@ def stk_push():
                 return jsonify({"error": "This sale has already been paid"}), 400
 
             if existing_payment.status == "Pending":
-                age = (datetime.utcnow() - existing_payment.created_at).total_seconds()
+                age = (datetime.utcnow() -
+                       existing_payment.created_at).total_seconds()
                 if age <= PENDING_TIMEOUT_SECONDS:
                     remaining = int(PENDING_TIMEOUT_SECONDS - age)
                     return jsonify({
@@ -451,22 +458,22 @@ def stk_push():
         # ── Upsert: update existing row OR insert a fresh one ─────────────────
         if existing_payment:
             # Update in place — avoids any UniqueViolation
-            existing_payment.mrid         = mrid
-            existing_payment.crid         = crid
-            existing_payment.phone_paid   = phone_paid
+            existing_payment.mrid = mrid
+            existing_payment.crid = crid
+            existing_payment.phone_paid = phone_paid
             existing_payment.trans_amount = float(trans_amount)
-            existing_payment.trans_code   = None           # clear any stale code
-            existing_payment.status       = "Pending"
-            existing_payment.created_at   = datetime.utcnow()  # reset timeout clock
+            existing_payment.trans_code = None           # clear any stale code
+            existing_payment.status = "Pending"
+            existing_payment.created_at = datetime.utcnow()  # reset timeout clock
         else:
             new_payment = Payment(
-                sale_id      = sale_id,
-                mrid         = mrid,
-                crid         = crid,
-                phone_paid   = phone_paid,
-                trans_amount = float(trans_amount),
-                status       = "Pending",
-                created_at   = datetime.utcnow()
+                sale_id=sale_id,
+                mrid=mrid,
+                crid=crid,
+                phone_paid=phone_paid,
+                trans_amount=float(trans_amount),
+                status="Pending",
+                created_at=datetime.utcnow()
             )
             SessionLocal.add(new_payment)
 
@@ -504,7 +511,7 @@ def call_back():
         if int(data['Body']['stkCallback']['ResultCode']) == 0:
             trans_code = data['Body']['stkCallback']['CallbackMetadata']['Item'][1]['Value']
             existing_payment.trans_code = trans_code
-            existing_payment.status     = "Paid"
+            existing_payment.status = "Paid"
 
             text = (
                 "Payment Receipt\n\n"
@@ -519,7 +526,7 @@ def call_back():
         else:
             # Customer cancelled, wrong PIN, timeout, etc.
             # Mark Unpaid so the cashier can retry immediately
-            existing_payment.status     = "Unpaid"
+            existing_payment.status = "Unpaid"
             existing_payment.trans_code = None
 
         SessionLocal.commit()
@@ -735,18 +742,18 @@ def dashboard():
             "charts": {
                 "sales_by_product": {
                     "labels": [r.name for r in sales_by_product],
-                    "values": [r.cnt  for r in sales_by_product]
+                    "values": [r.cnt for r in sales_by_product]
                 },
                 "revenue_by_product": {
-                    "labels": [r.name       for r in revenue_by_product],
+                    "labels": [r.name for r in revenue_by_product],
                     "values": [float(r.rev) for r in revenue_by_product]
                 },
                 "sales_per_day": {
                     "labels": [str(r.day) for r in sales_per_day],
-                    "values": [r.cnt      for r in sales_per_day]
+                    "values": [r.cnt for r in sales_per_day]
                 },
                 "stock_levels": {
-                    "labels": [r.name     for r in stock_levels],
+                    "labels": [r.name for r in stock_levels],
                     "values": [r.quantity for r in stock_levels]
                 }
             }
